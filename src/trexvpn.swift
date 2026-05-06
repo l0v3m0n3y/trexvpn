@@ -45,7 +45,7 @@ public class Trexvpn{
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = headers
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["email": email,"paassword": password]
+        let body: [String: Any] = ["email": email,"password": password]
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         let (responseData, _) = try await URLSession.shared.data(for: request)
         let json = try JSONSerialization.jsonObject(with: responseData)
@@ -76,7 +76,7 @@ public class Trexvpn{
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = headers
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["email": email,"paassword": password]
+        let body: [String: Any] = ["email": email,"password": password]
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         
         let (responseData, _) = try await URLSession.shared.data(for: request)
