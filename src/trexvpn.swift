@@ -49,8 +49,9 @@ public class Trexvpn{
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         let (responseData, _) = try await URLSession.shared.data(for: request)
         let json = try JSONSerialization.jsonObject(with: responseData)
-        if let token = json["token"] as? String {
-            self.headers["authorization"] = "Bearer \(token)"
+        if let dict = json as? [String: Any],
+           let token = dict["token"] as? String {
+            headers["authorization"] = "Bearer \(token)"
         }
         return json
     }
@@ -80,8 +81,9 @@ public class Trexvpn{
         
         let (responseData, _) = try await URLSession.shared.data(for: request)
         let json = try JSONSerialization.jsonObject(with: responseData)
-        if let token = json["token"] as? String {
-            self.headers["authorization"] = "Bearer \(token)"
+        if let dict = json as? [String: Any],
+           let token = dict["token"] as? String {
+            headers["authorization"] = "Bearer \(token)"
         }
         return json
     }
