@@ -20,88 +20,96 @@ extension URLSession {
     }
 }
 
-public class Trexvpn{
+public enum HTTPMethod: String {
+    case get = "GET"
+    case post = "POST"
+    case put = "PUT"
+    case delete = "DELETE"
+    case patch = "PATCH"
+}
+
+public class Trexvpn {
     private let api = "https://t-rex.top/api"
     private var headers: [String: String]
     
     public init() {
         self.headers = [
-        "x-client-platform":"android",
-        "Connection":"keep-alive",
-        "Accept-Encoding":"deflate, zstd",
-        "Accept-Language":"en-US,en;q=0.9",
-        "User-Agent":"T-REX VPN Client/android/1.0.34"
+            "x-client-platform": "android",
+            "Connection": "keep-alive",
+            "Accept-Encoding": "deflate, zstd",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "T-REX VPN Client/android/1.0.34"
         ]
-
     }
-   
-
-    public func register(email: String, password: String) async throws -> Any {
-        let urlString = "\(api)/register"
-        guard let url = URL(string: urlString) else {
+    
+    private func fetchJSON(from urlString: String,method: HTTPMethod = .get,body: Data? = nil,queryParameters: [String: String]? = nil) async throws -> Any {
+        var urlComponents = URLComponents(string: urlString)
+        if let queryParameters = queryParameters {
+            urlComponents?.queryItems = queryParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        guard let url = urlComponents?.url else {
             throw NSError(domain: "Invalid URL", code: -1)
         }
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        request.httpMethod = method.rawValue
         request.allHTTPHeaderFields = headers
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["email": email,"password": password]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-        let (responseData, _) = try await URLSession.shared.data(for: request)
-        let json = try JSONSerialization.jsonObject(with: responseData)
-        if let dict = json as? [String: Any],
-           let token = dict["token"] as? String {
-            headers["authorization"] = "Bearer \(token)"
+        if let body = body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        return json
-    }
-
-    public func get_servers() async throws -> Any {
-        guard let url = URL(string: "\(api)/vpn/untrusted-proxies") else {
-            throw NSError(domain: "Invalid URL", code: -1)
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = headers
         let (data, _) = try await URLSession.shared.data(for: request)
-        return  try JSONSerialization.jsonObject(with: data)
+        return try JSONSerialization.jsonObject(with: data)
     }
 
-    public func login(email: String, password: String) async throws -> Any {
-        let urlString = "\(api)/auth/login"
-        guard let url = URL(string: urlString) else {
-            throw NSError(domain: "Invalid URL", code: -1)
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["email": email,"password": password]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+    
+    public func register(email: String, password: String) async throws -> Any {
+        let body: [String: Any] = ["email": email, "password": password]
+        let bodyData = try JSONSerialization.data(withJSONObject: body, options: [])
         
-        let (responseData, _) = try await URLSession.shared.data(for: request)
-        let json = try JSONSerialization.jsonObject(with: responseData)
-        if let dict = json as? [String: Any],
+        let response = try await fetchJSON(
+            from: "\(api)/register",
+            method: .post,
+            body: bodyData
+        )
+        
+        if let dict = response as? [String: Any],
            let token = dict["token"] as? String {
             headers["authorization"] = "Bearer \(token)"
         }
-        return json
-    }
-
-    public func forgot_password(email: String) async throws -> Any {
-        let urlString = "\(api)/auth/forgot-password"
-        guard let url = URL(string: urlString) else {
-            throw NSError(domain: "Invalid URL", code: -1)
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["email": email]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         
-        let (responseData, _) = try await URLSession.shared.data(for: request)
-        let json = try JSONSerialization.jsonObject(with: responseData)
-        return json
+        return response
+    }
+    
+    public func login(email: String, password: String) async throws -> Any {
+        let body: [String: Any] = ["email": email, "password": password]
+        let bodyData = try JSONSerialization.data(withJSONObject: body, options: [])
+        
+        let response = try await fetchJSON(
+            from: "\(api)/auth/login",
+            method: .post,
+            body: bodyData
+        )
+        
+        if let dict = response as? [String: Any],
+           let token = dict["token"] as? String {
+            headers["authorization"] = "Bearer \(token)"
+        }
+        
+        return response
+    }
+    
+    public func forgotPassword(email: String) async throws -> Any {
+        let body: [String: Any] = ["email": email]
+        let bodyData = try JSONSerialization.data(withJSONObject: body, options: [])
+        
+        return try await fetchJSON(
+            from: "\(api)/auth/forgot-password",
+            method: .post,
+            body: bodyData
+        )
+    }
+    
+    public func get_servers() async throws -> Any {
+        return try await fetchJSON(from: "\(api)/vpn/untrusted-proxies")
     }
 }
